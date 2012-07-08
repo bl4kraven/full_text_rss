@@ -8,15 +8,17 @@ from rssitem import RssItem
 class RssWriter():
 
     def __init__(self):
-        # List of RssItem
-        self.items = []
+        # Dict of RssItem
+        self.items = {}
         self.channels = {}
+
         # set default value
         self.channels["title"] = "RSS 2.0 Feed"
         self.channels["description"] = "Full text rss"
         self.channels["generator"] = "http://www.freezhongzi.info"
         self.channels["link"] = ""
         self.channels["language"] = "zh"
+        self.now = datetime.now()
         self.set_datetime("+0800")
         self.version = "2.0"
 
@@ -25,8 +27,14 @@ class RssWriter():
 		return RssItem()
 	
     def add_item(self, feed_item):
+        guid = feed_item.get_guid()
+        if not guid:
+            raise RuntimeError("feed_item's guid is empty")
 	    # Add a FeedItem
-		self.items.append(feed_item)
+        self.items[guid] = feed_item
+
+    def find_item(self, guid):
+        return self.items.get(guid, None)
 
     def set_title(self, title):
         self.channels["title"] = title
@@ -40,8 +48,7 @@ class RssWriter():
     def set_datetime(self, time_zone):
         # Set pubDate and lastBuildDate with time zone
         rfc822time = "%a, %d %b %Y %H:%M:%S " + time_zone
-        now = datetime.now()
-        self.channels["pubDate"] = now.strftime(rfc822time)
+        self.channels["pubDate"] = self.now.strftime(rfc822time)
         self.channels["lastBuildDate"] = self.channels["pubDate"]
 
     def get_datetime(self):
@@ -65,7 +72,7 @@ class RssWriter():
             fout.write('<%s>%s</%s>\n' % (key, value, key))
 
     def print_items(self, fout):
-        for item in self.items:
+        for item in self.items.values():
             fout.write('<item>\n')
             for key,value in item.elements.iteritems():
                 value = value.encode("utf-8")
@@ -90,6 +97,7 @@ if __name__ == "__main__":
     item.set_title("test")
     item.set_link("http://www.freezhongzi.info")
     item.set_content(u"你好 world")
+    item.set_guid("test")
     rss.add_item(item)
 
     fout = open("test.xml", "w")

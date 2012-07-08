@@ -28,3 +28,9 @@ class RssItem():
 
     def set_elements(self, key, value):
         self.elements[key] = value
+
+    def get_guid(self):
+        return self.elements.get("guid", None)
+    
+    def get_content(self):
+        return self.elements.get("content:encoded", None)
