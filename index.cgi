@@ -12,20 +12,20 @@ import shelve
 import sys
 
 def main():
-    if "url" in form and (not isinstance(form["url"], list)):
-        try:
-            #url = "http://www.ftchinese.com/rss/news"
-            storage = shelve.open('.feedcache')
-            cache = Cache(storage)
-            rss = cache.fetch(form["url"])
+    if "url" in form and (not isinstance(form.getvalue("url"), list)):
+        #try:
+        storage = shelve.open('.feedcache')
+        cache = Cache(storage)
+        rss = cache.fetch(form.getvalue("url"))
 
-            print "Content-type: application/atom+xml"
-            print 
-            rss.genarate_feed(sys.stdout)
-        finally:
-            storage.close()
+        print "Content-type: application/atom+xml"
+        print 
+        rss.genarate_feed(sys.stdout)
+        #finally:
+        storage.close()
     else:
-        pass
+        print 'Status: 400 Bad Request'
+        print
 
 if __name__ == "__main__":
     main()

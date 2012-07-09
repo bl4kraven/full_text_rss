@@ -22,6 +22,10 @@ class RssWriter():
         self.set_datetime("+0800")
         self.version = "2.0"
 
+        # http conditional header
+        self.modified = None
+        self.etag = None
+
     def new_item(self):
 	    # Create a new RssItem
 		return RssItem()

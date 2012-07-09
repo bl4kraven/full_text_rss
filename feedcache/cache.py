@@ -3,9 +3,9 @@
 
 # logging set
 import logging
-logging.basicConfig(filename="log.log",level=logging.DEBUG, format="%(asctime)s %(levelname)s %(message)s")
-#logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(message)s")
+logging.basicConfig(filename="log.log",format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 import urllib2
 from readability.readability import Document
@@ -18,11 +18,10 @@ from config import *
 
 class Cache():
 
-    #def __init__(self, storage, ttl_seconds=7200):
-    def __init__(self, storage, ttl_seconds=10):
+    def __init__(self, storage, ttl_seconds=3600):
         """ storage: backend key-value storage.
 
-            ttl_seconds: time to live time to content, default is 2 hours.
+            ttl_seconds: time to live time to content, default is 1 hours.
 
             user_agent: feedparser user agent
         """ 
@@ -61,62 +60,84 @@ class Cache():
 
         # fetch full text rss
         logger.debug("feedparser fetch...")
-        rss_read = feedparser.parse(url)
-        if not rss_read.version:
-            raise RuntimeError("feedparser.parse:Unknown feed type")
 
-        logger.debug("%s %s\n", rss_read.feed.title, rss_read.feed.description)
+        if cached_content:
+            # add conditional http GET
+            rss_read = feedparser.parse(url,
+                                        modified=cached_content.modified,
+                                        etag=cached_content.etag)
+        else:
+            rss_read = feedparser.parse(url)
 
-        # full text rss output
-        full_text_rss = RssWriter()
-        full_text_rss.set_title(rss_read.feed.title)
-        full_text_rss.set_link(rss_read.feed.link)
-        full_text_rss.set_description(rss_read.feed.description)
-        full_text_rss.set_datetime(TIME_ZONE)
 
-        # set item
-        for item in rss_read.entries:
-            if item.has_key("content"):
-                raise RuntimeError("rss.content: Already a full feed text")
+        status = rss_read.get("status", None)
+        if status == 304:
+            # no update, so update the cahce time
+            self.storage[key] = (now, cached_content)
+            return cached_content
 
-            logger.debug(item.title)
-            if item.has_key("guid"):
-                guid = item.guid
-            else:
-                guid = item.link
+        elif status == 200:
 
-            # find item from cache
-            if cached_content:
-                cached_item = cached_content.find_item(guid)
-                if cached_item and cached_item.get_content():
-                    logger.debug("return cached item")
-                    full_text_rss.add_item(cached_item)
-                    continue
+            logger.debug("%s %s\n", rss_read.feed.title, rss_read.feed.description)
 
-            full_text_item = full_text_rss.new_item()
-            full_text_item.set_title(item.title)
-            full_text_item.set_link(item.link)
-            full_text_item.set_guid(guid)
+            # full text rss output
+            full_text_rss = RssWriter()
+            full_text_rss.set_title(rss_read.feed.title)
+            full_text_rss.set_link(rss_read.feed.link)
+            full_text_rss.set_description(rss_read.feed.description)
+            full_text_rss.set_datetime(TIME_ZONE)
 
-            if item.has_key("published"):
-                full_text_item.set_datetime(item.published)
-            else:
-                full_text_item.set_datetime(full_text_rss.get_datetime())
+            # save modified and etag
+            full_text_rss.modified = rss_read.get("modified", None)
+            full_text_rss.etag = rss_read.get("etag", None)
 
-            try:
-                logger.debug("http read item link %s", item.link)
-                # timeout 
-                html = urllib2.urlopen(item.link, timeout=TIMEOUT).read()
-                readable_article = Document(html).summary()
-                full_text_item.set_content(readable_article)
-            except IOError:
-                logger.warning("url open fail, read nothing!")
+            # set item
+            for item in rss_read.entries:
+                if item.has_key("content"):
+                    raise RuntimeError("rss.content: Already a full feed text")
 
-            full_text_rss.add_item(full_text_item)
+                logger.debug(item.title)
+                if item.has_key("guid"):
+                    guid = item.guid
+                else:
+                    guid = item.link
 
-        # put in storage
-        self.storage[key] = (full_text_rss.now, full_text_rss)
-        return full_text_rss
+                # find item from cache
+                if cached_content:
+                    cached_item = cached_content.find_item(guid)
+                    if cached_item and cached_item.get_content():
+                        logger.debug("return cached item")
+                        full_text_rss.add_item(cached_item)
+                        continue
+
+                full_text_item = full_text_rss.new_item()
+                full_text_item.set_title(item.title)
+                full_text_item.set_link(item.link)
+                full_text_item.set_guid(guid)
+
+                if item.has_key("published"):
+                    full_text_item.set_datetime(item.published)
+                else:
+                    full_text_item.set_datetime(full_text_rss.get_datetime())
+
+                try:
+                    logger.debug("http read item link %s", item.link)
+                    # timeout 
+                    html = urllib2.urlopen(item.link, timeout=TIMEOUT).read()
+                    readable_article = Document(html).summary()
+                    full_text_item.set_content(readable_article)
+                except IOError:
+                    logger.warning("url open fail, read nothing!")
+
+                full_text_rss.add_item(full_text_item)
+
+            # put in storage
+            self.storage[key] = (full_text_rss.now, full_text_rss)
+            return full_text_rss
+
+        else:
+            raise RuntimeError("feedparser return unsuccess http status code")
+
 
 def main():
     import shelve
