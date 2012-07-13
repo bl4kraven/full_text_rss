@@ -4,15 +4,17 @@
 # logging set
 import logging
 logging.basicConfig(filename="log.log",format="%(asctime)s %(levelname)s %(message)s")
+#logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-import urllib2
-from readability.readability import Document
 import feedparser
 from rsswriter import RssWriter,RssItem
 from datetime import datetime
 import sys
+
+import Queue
+from getfulltext import GetFullText
 
 from config import *
 
@@ -77,78 +79,88 @@ class Cache():
             return cached_content
 
         elif status == 200:
-
-            logger.debug("%s %s\n", rss_read.feed.title, rss_read.feed.description)
-
-            # full text rss output
-            full_text_rss = RssWriter()
-            full_text_rss.set_title(rss_read.feed.title)
-            full_text_rss.set_link(rss_read.feed.link)
-            full_text_rss.set_description(rss_read.feed.description)
-            full_text_rss.set_datetime(TIME_ZONE)
-
-            # save modified and etag
-            full_text_rss.modified = rss_read.get("modified", None)
-            full_text_rss.etag = rss_read.get("etag", None)
-
-            # set item
-            for item in rss_read.entries:
-                if item.has_key("content"):
-                    raise RuntimeError("rss.content: Already a full feed text")
-
-                logger.debug(item.title)
-                if item.has_key("guid"):
-                    guid = item.guid
-                else:
-                    guid = item.link
-
-                # find item from cache
-                if cached_content:
-                    cached_item = cached_content.find_item(guid)
-                    if cached_item and cached_item.get_content():
-                        logger.debug("return cached item")
-                        full_text_rss.add_item(cached_item)
-                        continue
-
-                full_text_item = full_text_rss.new_item()
-                full_text_item.set_title(item.title)
-                full_text_item.set_link(item.link)
-                full_text_item.set_guid(guid)
-
-                if item.has_key("published"):
-                    full_text_item.set_datetime(item.published)
-                else:
-                    full_text_item.set_datetime(full_text_rss.get_datetime())
-
-                try:
-                    logger.debug("http read item link %s", item.link)
-                    # timeout 
-                    html = urllib2.urlopen(item.link, timeout=TIMEOUT).read()
-                    readable_article = Document(html).summary()
-                    full_text_item.set_content(readable_article)
-                except IOError:
-                    logger.warning("url open fail, read nothing!")
-
-                full_text_rss.add_item(full_text_item)
-
-            # put in storage
-            self.storage[key] = (full_text_rss.now, full_text_rss)
-            return full_text_rss
+            return self.fulltextrss(rss_read, key,  cached_content)
 
         else:
             raise RuntimeError("feedparser return unsuccess http status code")
 
+    def fulltextrss(self, rss_read, key, cached_content):
+        # full text rss output
+        logger.debug("%s %s\n", rss_read.feed.title, rss_read.feed.description)
+
+        full_text_rss = RssWriter()
+        full_text_rss.set_title(rss_read.feed.title)
+        full_text_rss.set_link(rss_read.feed.link)
+        full_text_rss.set_description(rss_read.feed.description)
+        full_text_rss.set_datetime(TIME_ZONE)
+
+        # save modified and etag
+        full_text_rss.modified = rss_read.get("modified", None)
+        full_text_rss.etag = rss_read.get("etag", None)
+
+        # thread pool queue
+        queue = Queue.Queue()
+        out_queue = Queue.Queue()
+
+        # set item
+        for item in rss_read.entries:
+            if item.has_key("content"):
+                raise RuntimeError("rss.content: Already a full feed text")
+
+            logger.debug(item.title)
+
+            # the guid is link.
+            guid = item.link
+
+            # find item from cache
+            if cached_content:
+                cached_item = cached_content.find_item(guid)
+                if cached_item and cached_item.get_content():
+                    logger.debug("return cached item")
+                    full_text_rss.add_item(cached_item)
+                    continue
+
+            full_text_item = full_text_rss.new_item()
+            full_text_item.set_title(item.title)
+            full_text_item.set_link(item.link)
+            full_text_item.set_guid(guid)
+
+            if item.has_key("published"):
+                full_text_item.set_datetime(item.published)
+            else:
+                full_text_item.set_datetime(full_text_rss.get_datetime())
+
+            logger.debug("put in queue wait to thread to fetch")
+            queue.put(item.link)
+
+            full_text_rss.add_item(full_text_item)
+
+        # spawn a poll of theads
+        if not queue.empty():
+            for i in range(4):
+                t = GetFullText(queue, out_queue, TIMEOUT)
+                t.setDaemon(True)
+                t.start()
+
+            # wait threads
+            queue.join()
+
+            while not out_queue.empty():
+                url, content = out_queue.get()
+                full_text_rss.find_item(url).set_content(content)
+
+        # put in storage
+        self.storage[key] = (full_text_rss.now, full_text_rss)
+        return full_text_rss
+
 
 def main():
     import shelve
-    try:
-        url = "http://www.ftchinese.com/rss/news"
-        storage = shelve.open('.feedcache')
-        cache = Cache(storage)
-        cache.fetch(url)
-    finally:
-        storage.close()
-
+    url = "http://www.ftchinese.com/rss/news"
+    storage = shelve.open('.feedcache')
+    cache = Cache(storage)
+    cache.fetch(url)
+    storage.close()
 
 if __name__ == "__main__":
     main()
