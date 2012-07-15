@@ -77,11 +77,12 @@ class Cache():
             self.storage[key] = (now, cached_content)
             return cached_content
 
-        elif status == 200:
+        # 301/302 is http redirection
+        elif status == 200 or status == 301 or status == 302:
             return self.fulltextrss(rss_read, key,  cached_content)
 
         else:
-            logger.error("feedparser return unsuccess http status code")
+            logger.error("feedparser return http status code %d", status)
             raise RuntimeError("feedparser return unsuccess http status code")
 
     def fulltextrss(self, rss_read, key, cached_content):
@@ -104,10 +105,6 @@ class Cache():
 
         # set item
         for item in rss_read.entries:
-            if item.has_key("content"):
-                logger.error("rss.content: Already a full feed text")
-                raise RuntimeError("rss.content: Already a full feed text")
-
             logger.debug(item.title)
 
             # the guid is link.
