@@ -1,0 +1,84 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />  
+    <title>Full-Text RSS Feeds | from fivefilters.org</title>
+    <!--<script type="text/javascript" src="niceforms.js"></script>	-->
+	<link rel="stylesheet" href="css/niceforms-default.css" type="text/css" media="screen" />
+	<script type="text/javascript" src="js/niceforms.js"></script>
+	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
+	<script type="text/javascript">
+	var baseUrl = 'http://'+window.location.host+window.location.pathname.replace(/(\/index\.html|\/)$/, '');
+	</script>
+  </head>
+  <body style="background-color: #eee; margin: 0; line-height: 1.4em;">
+	<div id="container">
+	<h1 style="padding-bottom: 30px;">全文RSS输出</h1>
+    <form method="get" action="index.cgi" id="form" class="niceform">
+	<fieldset>
+        <legend>建立全文feed</legend>
+		<dl>
+			<dt><label for="url">输入URL:</label></dt>
+			<dd><input type="text" id="url" name="url" style="width: 450px" /></dd>
+		</dl>
+	</fieldset>
+	<fieldset>
+	<legend>选项</legend>
+	<!-- Remove the comments below to include API key field -->
+	<dl>
+		<dt><label for="key">API key:</label></dt>
+		<dd><input type="text" id="key" name="key" /></dd>
+	</dl>
+	<!--
+	<dl>
+		<dt><label for="max">Max items:</label></dt>
+		<dd><select name="max" id="max">
+							<option value="1">1</option>
+							<option value="2">2</option>
+							<option value="3">3</option>
+							<option value="4">4</option>
+							<option value="5" selected="selected">5</option>
+							<option value="6">6</option>
+							<option value="7">7</option>
+							<option value="8">8</option>
+							<option value="9">9</option>
+							<option value="10">10</option>
+							</select></dd>
+	</dl>
+	<dl>
+		<dt><label for="links">Links</label></dt>
+		<dd><select name="links">
+			<option value="preserve" selected="selected">preserve</option>
+			<option value="footnotes">add to footnotes</option>
+			<option value="remove">remove</option>
+			</select></label></dd>
+	</dl>
+	-->
+	</fieldset>
+	<fieldset class="action" style="background: transparent; border: none; margin-bottom: 20px; padding: 0; text-align: center">
+		<input type="submit" id="sudbmit" name="submit" value="建立Feed" />
+	</fieldset>
+	</form>
+
+    <p>
+    本项目参考了<a href="http://fivefilters.org/content-only/">fivefilters的全文RSS</a>，用Python重新实现了一遍，项目开源地址在<a href="http://www.github.com/lbzhung/full_text_rss">github</a>。
+    </p>
+
+    <p>
+    本项目主要是为了方便自己Google Reader的全文RSS订阅而开发的，所以feed建立要输入API key，但所有人都可订阅feed。
+    下一步如果测试稳定的话，我会公布几个我自己常用的rss全文feed地址。
+    </p>
+	
+    <h3>公布几个做好的全文RSS地址</h3>
+    <fieldset>
+		<dl>
+		</dl>
+    </fieldset>
+
+
+	<h3>License</h3>
+	<p><a href="http://en.wikipedia.org/wiki/Affero_General_Public_License" style="border-bottom: none;"><img src="images/agplv3.png" alt="AGPL logo" /></a><br />This web application is licensed under the <a href="http://en.wikipedia.org/wiki/Affero_General_Public_License">AGPL version 3</a> &mdash; which basically means if you use the code to offer the same or similar service for your users, you are also required to share the code with your users so they can do the same themselves. (<a href="http://www.clipperz.com/users/marco/blog/2008/05/30/freedom_and_privacy_cloud_call_action">More on why this is important.</a>)</p> 
+	</div>
+  </body>
+</html>
