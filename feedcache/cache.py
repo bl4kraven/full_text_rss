@@ -4,9 +4,8 @@
 # logging set
 import logging
 logging.basicConfig(filename="log.log",format="%(asctime)s %(levelname)s %(message)s")
-#logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARNING)
 
 import feedparser
 from rsswriter import RssWriter,RssItem
@@ -16,11 +15,10 @@ import sys
 import Queue
 from getfulltext import GetFullText
 
-from config import *
 
 class Cache():
 
-    def __init__(self, storage, ttl_seconds=3600):
+    def __init__(self, storage, time_zone, timeout, ttl_seconds=3600):
         """ storage: backend key-value storage.
 
             ttl_seconds: time to live time to content, default is 1 hours.
@@ -30,14 +28,15 @@ class Cache():
 
         self.storage = storage
         self.ttl = ttl_seconds
+        self.time_zone = time_zone
+        self.timeout = timeout
 
-    def fetch(self, url, off_line=False):
+    def fetch(self, url, new_feed):
         """Return the full text feed at url.
 
         url: The URL of the feed.
 
-        off_line=False: When True, only return data from the local
-        cache and never access the remote URL.
+        new_feed=False: When True, create new feed, otherwise return local feed.
         """
         logger.info("fetch rss %s", url)
         key = url
@@ -45,10 +44,10 @@ class Cache():
 
         cached_time, cached_content = self.storage.get(key, (None, None))
 
-        # return the cache content
-        if off_line:
-            logger.debug('offline mode')
-            return cached_content
+        # not allow to create feed
+        if not new_feed and not cached_content:
+            logger.error("not allow to create feed")
+            raise RuntimeError("not allow to create feed")
 
         if cached_time:
             delta = now - cached_time
@@ -82,17 +81,18 @@ class Cache():
             return self.fulltextrss(rss_read, key,  cached_content)
 
         else:
+            logger.error("feedparser return unsuccess http status code")
             raise RuntimeError("feedparser return unsuccess http status code")
 
     def fulltextrss(self, rss_read, key, cached_content):
         # full text rss output
-        logger.debug("%s %s\n", rss_read.feed.title, rss_read.feed.description)
+        logger.debug("%s %s", rss_read.feed.title, rss_read.feed.description)
 
         full_text_rss = RssWriter()
         full_text_rss.set_title(rss_read.feed.title)
         full_text_rss.set_link(rss_read.feed.link)
         full_text_rss.set_description(rss_read.feed.description)
-        full_text_rss.set_datetime(TIME_ZONE)
+        full_text_rss.set_datetime(self.time_zone)
 
         # save modified and etag
         full_text_rss.modified = rss_read.get("modified", None)
@@ -105,6 +105,7 @@ class Cache():
         # set item
         for item in rss_read.entries:
             if item.has_key("content"):
+                logger.error("rss.content: Already a full feed text")
                 raise RuntimeError("rss.content: Already a full feed text")
 
             logger.debug(item.title)
@@ -138,7 +139,7 @@ class Cache():
         # spawn a poll of theads
         if not queue.empty():
             for i in range(4):
-                t = GetFullText(queue, out_queue, TIMEOUT)
+                t = GetFullText(queue, out_queue, self.timeout)
                 t.setDaemon(True)
                 t.start()
 
