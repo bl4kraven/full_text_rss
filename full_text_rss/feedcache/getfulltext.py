@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# !/usr/bin/env python
 # -*-coding:UTF-8-*-
 
 import Queue
@@ -6,8 +6,10 @@ import threading
 import urllib2
 from readability.readability import Document
 
+
 class GetFullText(threading.Thread):
     """ Thread grab full html text """
+
     def __init__(self, queue, out_queue, timeout):
         threading.Thread.__init__(self)
         self.queue = queue
@@ -41,7 +43,7 @@ if __name__ == "__main__":
         t.setDaemon(True)
         t.start()
 
-    urls = ["http://www.baidu.com", "http://www.google.com", 
+    urls = ["http://www.baidu.com", "http://www.google.com",
             "http://www.cppblog.com", "http://www.twitter.com"]
 
     # put url in threads pool
@@ -55,4 +57,3 @@ if __name__ == "__main__":
         url, content = out_queue.get()
         print url, content[:50]
         print
-

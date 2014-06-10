@@ -1,12 +1,13 @@
-#!/usr/bin/env python
+# !/usr/bin/env python
 # -*-coding:UTF-8-*-
 # RSS 2.0 feed writer
 
 from datetime import datetime
-from rssitem import RssItem
+
+from full_text_rss.feedcache.rsswriter.rssitem import RssItem
+
 
 class RssWriter():
-
     def __init__(self):
         # Dict of RssItem
         self.items = {}
@@ -27,14 +28,14 @@ class RssWriter():
         self.etag = None
 
     def new_item(self):
-	    # Create a new RssItem
-		return RssItem()
-	
+        # Create a new RssItem
+        return RssItem()
+
     def add_item(self, feed_item):
         guid = feed_item.get_guid()
         if not guid:
             raise RuntimeError("feed_item's guid is empty")
-	    # Add a FeedItem
+            # Add a FeedItem
         self.items[guid] = feed_item
 
     def find_item(self, guid):
@@ -62,15 +63,16 @@ class RssWriter():
         self.channels[key] = value
 
     def print_head(self, fout):
-		fout.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-		fout.write('<rss version="%s" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/">\n' % self.version)
+        fout.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+        fout.write(
+            '<rss version="%s" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/">\n' % self.version)
 
     def print_tale(self, fout):
         fout.write('</channel></rss>')
 
     def print_channels(self, fout):
         fout.write('<channel>\n')
-        for key,value in self.channels.iteritems():
+        for key, value in self.channels.iteritems():
             # Encoding to utf-8
             value = value.encode("utf-8")
             fout.write('<%s>%s</%s>\n' % (key, value, key))
@@ -78,17 +80,18 @@ class RssWriter():
     def print_items(self, fout):
         for item in self.items.values():
             fout.write('<item>\n')
-            for key,value in item.elements.iteritems():
+            for key, value in item.elements.iteritems():
                 value = value.encode("utf-8")
                 fout.write('<%s>%s</%s>\n' % (key, value, key))
             fout.write('</item>\n')
 
     def genarate_feed(self, fout):
         # Output the finally rss feed
-		self.print_head(fout)
-		self.print_channels(fout)
-		self.print_items(fout)
-		self.print_tale(fout)
+        self.print_head(fout)
+        self.print_channels(fout)
+        self.print_items(fout)
+        self.print_tale(fout)
+
 
 if __name__ == "__main__":
     # Test

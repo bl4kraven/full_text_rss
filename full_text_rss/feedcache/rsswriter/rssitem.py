@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+# !/usr/bin/env python
 # -*-coding:UTF-8-*-
 # RSS 2.0 item class
 
-class RssItem():
 
+class RssItem():
     def __init__(self):
         self.elements = {}
 
@@ -31,6 +31,6 @@ class RssItem():
 
     def get_guid(self):
         return self.elements.get("guid", None)
-    
+
     def get_content(self):
         return self.elements.get("content:encoded", None)
