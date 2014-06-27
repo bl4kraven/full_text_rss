@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*-coding:UTF-8-*-
+#-*-coding:UTF-8-*-
 # setting config
 
 # time zone
@@ -9,5 +9,5 @@ TIME_ZONE = "+0800"
 TIMEOUT = 15
 
 
-# key list to verfiy, so can create new feed
+# key list to verify, so can create new feed
 KEY_LIST = []

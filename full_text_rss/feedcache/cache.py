@@ -1,30 +1,29 @@
-#!/usr/bin/env python
+# !/usr/bin/env python
 # -*-coding:UTF-8-*-
 
 # logging set
 import logging
-logging.basicConfig(filename="log.log",format="%(asctime)s %(levelname)s %(message)s")
+
+logging.basicConfig(filename="log.log", format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
 
 import feedparser
-from rsswriter import RssWriter,RssItem
+from full_text_rss.feedcache.rsswriter import RssWriter
 from datetime import datetime
-import sys
 
 import Queue
-from getfulltext import GetFullText
+from full_text_rss.feedcache.getfulltext import GetFullText
 
 
 class Cache():
-
     def __init__(self, storage, time_zone, timeout, ttl_seconds=3600):
         """ storage: backend key-value storage.
 
             ttl_seconds: time to live time to content, default is 1 hours.
 
             user_agent: feedparser user agent
-        """ 
+        """
 
         self.storage = storage
         self.ttl = ttl_seconds
@@ -51,7 +50,7 @@ class Cache():
 
         if cached_time:
             delta = now - cached_time
-            seconds = delta.seconds + delta.days*24*3600
+            seconds = delta.seconds + delta.days * 24 * 3600
             if seconds <= self.ttl:
                 logger.debug("in ttl return cache content")
                 return cached_content
@@ -70,7 +69,6 @@ class Cache():
         else:
             rss_read = feedparser.parse(url)
 
-
         status = rss_read.get("status", None)
         if status == 304:
             # no update, so update the cahce time
@@ -79,7 +77,7 @@ class Cache():
 
         # 301/302 is http redirection
         elif status == 200 or status == 301 or status == 302:
-            return self.fulltextrss(rss_read, key,  cached_content)
+            return self.fulltextrss(rss_read, key, cached_content)
 
         else:
             logger.error("feedparser return http status code %d", status)
@@ -154,11 +152,13 @@ class Cache():
 
 def main():
     import shelve
+
     url = "http://www.ftchinese.com/rss/news"
     storage = shelve.open('.feedcache')
     cache = Cache(storage)
     cache.fetch(url)
     storage.close()
+
 
 if __name__ == "__main__":
     main()
